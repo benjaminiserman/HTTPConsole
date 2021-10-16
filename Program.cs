@@ -9,7 +9,7 @@ namespace HTTPConsole
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             Uri uri = null;
             Console.WriteLine("Enter URL: ");
@@ -53,7 +53,7 @@ namespace HTTPConsole
                         string path = string.Empty;
                         InputHandler.Input(() => getString().Trim(), delegate (string s)
                         {
-                            new Uri(s, UriKind.RelativeOrAbsolute); // this will error and trip InputHandler try/catch if bad path
+                            _ = new Uri(s, UriKind.RelativeOrAbsolute); // this will error and trip InputHandler try/catch if bad path
                             path = s;
                         });
 
@@ -187,12 +187,11 @@ namespace HTTPConsole
 
         public static void BadLog(object x, string pipePath, bool display) // this is very inefficent
         {
-            StreamWriter writer = null;
             if (!string.IsNullOrWhiteSpace(pipePath))
             {
                 try
                 {
-                    writer = File.AppendText(pipePath);
+                    StreamWriter writer = File.AppendText(pipePath);
                     if (writer is not null)
                     {
                         writer.WriteLine(x);
@@ -207,7 +206,6 @@ namespace HTTPConsole
             }
 
             if (display) Console.WriteLine(x);
-            
         }
     }
 }

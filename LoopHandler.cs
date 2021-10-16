@@ -118,7 +118,7 @@ namespace HTTPConsole
             {
                 if (displayCounter)
                 {
-                    Program.BadLog($"TRIAL {j} WITH COUNTER {i}", pipePath, display);
+                    Program.BadLog($"TRIAL {j + 1} WITH COUNTER {i}", pipePath, true);
                 }
 
                 int c = 0; // current macro
