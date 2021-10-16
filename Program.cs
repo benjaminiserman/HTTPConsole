@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -13,10 +14,10 @@ namespace HTTPConsole
             Console.WriteLine("Enter URL: ");
             InputHandler.Input(Console.ReadLine, s => uri = new UriBuilder(s).Uri);
 
-            Command(Console.ReadLine, true, uri, false, 0, string.Empty);
+            Command(Console.ReadLine, true, uri, false, 0, string.Empty, null);
         }
 
-        public static void Command(Func<string> getString, bool verbose, Uri uri, bool loop, int counter, string pipePath)
+        public static void Command(Func<string> getString, bool verbose, Uri uri, bool loop, int counter, string pipePath, Dictionary<Condition, string> conditions)
         {
             bool display = true;
 
@@ -57,7 +58,7 @@ namespace HTTPConsole
 
                         using (StreamReader reader = new(path))
                         {
-                            Command(reader.ReadLine, runVerbose, uri, loop, counter, pipePath);
+                            Command(reader.ReadLine, runVerbose, uri, loop, counter, pipePath, conditions);
                         }
 
                         WriteLine("RUN complete.");

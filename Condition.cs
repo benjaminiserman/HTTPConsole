@@ -9,19 +9,22 @@ namespace HTTPConsole
     public class Condition
     {
         Predicate<string> condition;
+        public string Expected { get; private set; }
 
         public Condition(string s)
         {
             string[] split = s.Split();
 
-            bool not = s[0] == '!';
+            Expected = split[0];
+
+            bool not = s[1] == '!';
 
             string method;
-            if (not) method = split[0][1..].ToLower();
-            else method = split[0].ToLower();
+            if (not) method = split[1][1..].ToLower();
+            else method = split[1].ToLower();
 
             string query = string.Empty;
-            for (int i = 1; i < split.Length; i++) query += $"{split[i]} ";
+            for (int i = 2; i < split.Length; i++) query += $"{split[i]} ";
             query = query[0..^1];
 
             switch (method)
