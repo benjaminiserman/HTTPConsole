@@ -10,21 +10,23 @@ namespace HTTPConsole
     {
         Predicate<string> condition;
         public string Expected { get; private set; }
+        public string Command { get; private set; }
 
         public Condition(string s)
         {
             string[] split = s.Split();
 
-            Expected = split[0];
+            Command = split[0];
+            Expected = split[1];
 
-            bool not = s[1] == '!';
+            bool not = split[2][0] == '!';
 
             string method;
-            if (not) method = split[1][1..].ToLower();
-            else method = split[1].ToLower();
+            if (not) method = split[2][1..].ToLower();
+            else method = split[2].ToLower();
 
             string query = string.Empty;
-            for (int i = 2; i < split.Length; i++) query += $"{split[i]} ";
+            for (int i = 3; i < split.Length; i++) query += $"{split[i]} ";
             query = query[0..^1];
 
             switch (method)
@@ -32,19 +34,23 @@ namespace HTTPConsole
                 case "contains":
                 case "contain":
                 {
-                    condition = s => s.Contains(query);
+                    if (not) condition = s => !s.Contains(query);
+                    else condition = s => s.Contains(query);
                     break;
                 }
                 case "is":
                 case "equals":
                 {
-                    condition = s => s == query;
+                    if (not) condition = s => s != query;
+                    else condition = s => s == query;
                     break;
                 }
             }
         }
 
         public bool Eval(string x) => condition(x);
+
+        public bool Eval(Dictionary<string, string> dict) => Eval(dict[Expected]);
     }
 }
 

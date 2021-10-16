@@ -97,7 +97,7 @@ namespace HTTPConsole
 
             WriteLine("Enter special instructions (enter twice to continue)");
 
-            Dictionary<Condition, string> conditions = ConditionHandler.Handle(getString);
+            List<Condition> conditions = ConditionHandler.Handle(getString);
             // display/break key/header/content/code/uri contains/is value
 
             WriteLine("Enter macro (finish with END)");
@@ -118,13 +118,19 @@ namespace HTTPConsole
             {
                 if (displayCounter)
                 {
-                    string x = $"TRIAL {j} WITH COUNTER {i}";
-                    Program.BadLog(x, pipePath, display);
+                    Program.BadLog($"TRIAL {j} WITH COUNTER {i}", pipePath, display);
                 }
 
                 int c = 0; // current macro
 
-                Program.Command(() => macro[c++], verbose, uri, true, i, pipePath, conditions); // haha funny c++
+                try
+                {
+                    Program.Command(() => macro[c++], verbose, uri, true, i, pipePath, conditions); // haha funny c++
+                }
+                catch (TimeoutException e) // bad, don't be lazy
+                {
+                    break;
+                }
             }
 
             void WriteLine(object x)

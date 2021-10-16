@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Linq;
 
 namespace HTTPConsole
 {
@@ -17,7 +18,7 @@ namespace HTTPConsole
             Command(Console.ReadLine, true, uri, false, 0, string.Empty, null);
         }
 
-        public static void Command(Func<string> getString, bool verbose, Uri uri, bool loop, int counter, string pipePath, Dictionary<Condition, string> conditions)
+        public static void Command(Func<string> getString, bool verbose, Uri uri, bool loop, int counter, string pipePath, List<Condition> conditions)
         {
             bool display = true;
 
@@ -95,7 +96,39 @@ namespace HTTPConsole
                 WriteLine("Sending...");
 
                 if (GetResponse(request) is not HttpWebResponse response) BadLog("RECEIVED NO RESPONSE", pipePath, display);
-                else DisplayResponse(response, display, pipePath);
+                else
+                {
+                    var s = new StreamReader(response.GetResponseStream());
+                    string content = s.ReadToEnd();
+                    s.Close();
+
+                    Dictionary<string, string> dict = new()
+                    {
+                        { "content", content },
+                    };
+
+                    // key is 
+
+                    bool commandDisplay = !conditions.Any(x => x.Command == "display");
+
+                    foreach (Condition condition in conditions)
+                    {
+                        if (condition.Eval(dict))
+                        {
+                            switch (condition.Command)
+                            {
+                                case "display":
+                                    commandDisplay = true;
+                                    break;
+                                case "break":
+                                    BadLog("BREAK CASE ENCOUNTERED", pipePath, display);
+                                    throw new TimeoutException("Interrupt.");
+                            }
+                        }
+                    }
+
+                    DisplayResponse(content, response, display && commandDisplay, pipePath);
+                }
             }
 
             void WriteLine(object x)
@@ -119,7 +152,7 @@ namespace HTTPConsole
             return response;
         }
 
-        private static void DisplayResponse(HttpWebResponse response, bool display, string pipePath)
+        private static void DisplayResponse(string content, HttpWebResponse response, bool display, string pipePath)
         {
             StreamWriter writer = null;
             try
@@ -141,11 +174,8 @@ namespace HTTPConsole
 
             Write("\nCONTENT:");
 
-            var s = new StreamReader(response.GetResponseStream());
+            Write(content);
 
-            Write(s.ReadToEnd());
-
-            s.Close();
             if (writer is not null) writer.Close();
 
             void Write(object x)
