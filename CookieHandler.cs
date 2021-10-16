@@ -5,7 +5,7 @@ namespace HTTPConsole
 {
     public static class CookieHandler
     {
-        public static void Handle(HttpWebRequest request, Uri uri, Func<string> getString, bool verbose)
+        public static void Handle(HttpWebRequest request, Uri uri, Func<string> getString, bool verbose, bool loop, int counter)
         {
             if (request.SupportsCookieContainer)
             {
@@ -23,6 +23,12 @@ namespace HTTPConsole
                         int equalsIndex = cookieString.IndexOf('=');
                         string key = cookieString.Substring(0, equalsIndex);
                         string value = cookieString.Substring(equalsIndex + 1);
+
+                        if (loop)
+                        {
+                            key = key.Replace("$i", $"{counter}");
+                            value = value.Replace("$i", $"{counter}");
+                        }
 
                         request.CookieContainer.Add(new Cookie(key, value, null, uri.Host));
                     }

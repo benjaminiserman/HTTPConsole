@@ -7,7 +7,7 @@ namespace HTTPConsole
 {
     public static class ContentHandler
     {
-        public static void Handle(HttpWebRequest request, Func<string> getString, bool verbose)
+        public static void Handle(HttpWebRequest request, Func<string> getString, bool verbose, bool loop, int counter)
         {
             WriteLine("ContentType: (blank to skip, 0 for application/x-www-form-urlencoded)");
             string s = getString().Trim();
@@ -25,6 +25,11 @@ namespace HTTPConsole
                 else contentString += s;
             }
 
+            if (loop)
+            {
+                contentString = contentString.Replace("$i", $"{counter}");
+            }
+
             byte[] byteArray = Encoding.ASCII.GetBytes(contentString);
 
             request.ContentLength = byteArray.Length;
@@ -39,6 +44,9 @@ namespace HTTPConsole
             {
                 if (verbose) Console.WriteLine(x);
             }
+
+            // $i
+            // \$i
         }
     }
 }

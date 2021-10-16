@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Net;
-using System.Reflection;
 using System.Text;
 
 namespace HTTPConsole
@@ -11,17 +10,15 @@ namespace HTTPConsole
         static void Main(string[] args)
         {
             Uri uri = null;
+            Console.WriteLine("Enter URL: ");
             InputHandler.Input(Console.ReadLine, s => uri = new UriBuilder(s).Uri);
 
-            Console.Write("Enter URL: ");
-
-            Command(Console.ReadLine, true, uri);
+            Command(Console.ReadLine, true, uri, false, 0, string.Empty);
         }
 
-        private static void Command(Func<string> getString, bool verbose, Uri uri)
+        public static void Command(Func<string> getString, bool verbose, Uri uri, bool loop, int counter, string pipePath)
         {
-            bool pipe = false, write = true;
-            string pipePath = string.Empty;
+            bool display = true;
 
             while (true)
             {
@@ -30,10 +27,12 @@ namespace HTTPConsole
                 WriteLine("METHOD");
                 InputHandler.Input(() => getString().ToUpper(), s => request.Method = s);
 
+                bool runVerbose = false;
+
                 switch (request.Method)
                 {
                     case "LOOP":
-                        Loop(uri);
+                        LoopHandler.Loop(getString, verbose, uri, display, pipePath);
                         continue;
                     case "URL":
                         WriteLine("Enter URL: ");
@@ -43,10 +42,10 @@ namespace HTTPConsole
                         WriteLine("METHOD (verbatim)");
                         InputHandler.Input(() => getString().ToUpper(), s => request.Method = s);
                         continue;
+                    case "RUN_DEBUG":
+                        runVerbose = true;
+                        goto case "RUN";
                     case "RUN":
-                        WriteLine("Display prompts while running? (y/n)");
-                        bool runVerbose = InputHandler.InputYN(getString);
-
                         WriteLine("Enter path of file to run.");
 
                         string path = string.Empty;
@@ -58,28 +57,21 @@ namespace HTTPConsole
 
                         using (StreamReader reader = new(path))
                         {
-                            Command(reader.ReadLine, runVerbose, uri);
+                            Command(reader.ReadLine, runVerbose, uri, loop, counter, pipePath);
                         }
 
                         WriteLine("RUN complete.");
                         continue;
                     case "PIPE":
                         WriteLine("Display output? (y/n)");
-                        write = InputHandler.InputYN(getString);
+                        display = InputHandler.InputYN(getString);
 
                         WriteLine("Pipe to file: (enter nothing to disable)");
                         InputHandler.Input(() => getString().Trim(), delegate (string s)
                         {
-                            if (string.IsNullOrEmpty(s))
-                            {
-                                pipe = false;
-                            }
-                            else
-                            {
-                                _ = new Uri(s, UriKind.RelativeOrAbsolute); // this will error and trip InputHandler try/catch if bad path
-                                pipePath = s;
-                                pipe = true;
-                            }
+                            if (!string.IsNullOrEmpty(s)) _ = new Uri(s, UriKind.RelativeOrAbsolute); // this will error and trip InputHandler try/catch if bad path
+                            
+                            pipePath = s;
                         });
 
                         continue;
@@ -94,33 +86,15 @@ namespace HTTPConsole
                     if (string.IsNullOrWhiteSpace(input)) break;
 
                     string check = input.ToLower();
-                    if (check == "cookie") CookieHandler.Handle(request, uri, getString, verbose);
-                    else if (check == "content") ContentHandler.Handle(request, getString, verbose);
-                    else try
-                        {
-                            string[] split = input.Split();
-                            split[0] = char.ToUpper(split[0][0]) + split[0].Substring(1);
-
-                            object obj;
-
-                            string value = split[1];
-                            for (int i = 2; i < split.Length; i++) value += $" {split[i]}";
-
-                            PropertyInfo pInfo = typeof(WebRequest).GetProperty(split[0]);
-                            if (pInfo.PropertyType.IsEnum) obj = Enum.Parse(pInfo.PropertyType, value);
-                            else obj = Convert.ChangeType(value, pInfo.PropertyType);
-
-                            pInfo.SetValue(request, obj);
-                        }
-                        catch (Exception e)
-                        {
-                            WriteLine($"{e.Message}... Please try again.");
-                        }
+                    if (check == "cookie") CookieHandler.Handle(request, uri, getString, verbose, loop, counter);
+                    else if (check == "content") ContentHandler.Handle(request, getString, verbose, loop, counter);
+                    else PropertyHandler.Handle(request, input, verbose, loop, counter);
                 }
 
                 WriteLine("Sending...");
 
-                DisplayResponse(GetResponse(request), write, pipePath);
+                if (GetResponse(request) is not HttpWebResponse response) BadLog("RECEIVED NO RESPONSE", pipePath, display);
+                else DisplayResponse(response, display, pipePath);
             }
 
             void WriteLine(object x)
@@ -129,41 +103,9 @@ namespace HTTPConsole
             }
         }
 
-        private static void Loop(Uri uri)
-        {
-            for (int i = 0; i < 100; i++)
-            {
-                HttpWebRequest request = WebRequest.Create(uri) as HttpWebRequest;
-
-                request.Method = "GET";
-
-                if (true) // COOKIES
-                {
-                    request.CookieContainer ??= new CookieContainer();
-                    request.CookieContainer.Add(new Cookie("name", $"{i}", null, uri.Host));
-                }
-
-                Console.WriteLine($"\nTRIAL {i}\n");
-                
-                WebResponse response = GetResponse(request);
-
-                var s = new StreamReader(response.GetResponseStream());
-
-                string output = s.ReadToEnd();
-
-                s.Close();
-
-                if (output.Contains("appear to be a valid cookie")) break;
-                if (!output.Contains("Not very special though"))
-                {
-                    Console.WriteLine(output);
-                }
-            }
-        }
-
         private static WebResponse GetResponse(WebRequest request)
         {
-            WebResponse response = null;
+            WebResponse response;
             try
             {
                 response = request.GetResponse();
@@ -176,12 +118,19 @@ namespace HTTPConsole
             return response;
         }
 
-        private static void DisplayResponse(WebResponse response, bool display, string pipePath)
+        private static void DisplayResponse(HttpWebResponse response, bool display, string pipePath)
         {
             StreamWriter writer = null;
-            if (!string.IsNullOrWhiteSpace(pipePath)) writer = File.AppendText(pipePath);
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(pipePath)) writer = File.AppendText(pipePath);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"File write failed: {e.Message}");
+            }
 
-            Write($"Response with code ({(int)(response as HttpWebResponse).StatusCode}) from {response.ResponseUri}:");
+            Write($"Response with code ({(int)response.StatusCode}) from {response.ResponseUri}:");
             Write($"\nHEADERS:\n");
 
             foreach (string key in response.Headers.AllKeys)
@@ -203,6 +152,31 @@ namespace HTTPConsole
                 if (display) Console.WriteLine(x);
                 if (writer is not null) writer.WriteLine(x);
             }
+        }
+
+        public static void BadLog(object x, string pipePath, bool display) // this is very inefficent
+        {
+            StreamWriter writer = null;
+            if (!string.IsNullOrWhiteSpace(pipePath))
+            {
+                try
+                {
+                    writer = File.AppendText(pipePath);
+                    if (writer is not null)
+                    {
+                        writer.WriteLine(x);
+                        writer.Close();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"File write failed: {e.Message}");
+                }
+                
+            }
+
+            if (display) Console.WriteLine(x);
+            
         }
     }
 }
