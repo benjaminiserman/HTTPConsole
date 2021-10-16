@@ -19,7 +19,7 @@ namespace HTTPConsole
             {
                 HttpWebRequest request = WebRequest.Create(uri) as HttpWebRequest;
                 
-                Console.WriteLine("Method?");
+                Console.WriteLine("METHOD");
                 Input(s => request.Method = s, s => s.ToUpper());
 
                 switch (request.Method)
@@ -31,6 +31,10 @@ namespace HTTPConsole
                     case "URI":
                         Console.Write("Enter URL: ");
                         Input(s => uri = new UriBuilder(s).Uri);
+                        continue;
+                    case "VERBATIM":
+                        Console.WriteLine("METHOD (verbatim)");
+                        Input(s => request.Method = s, s => s.ToUpper());
                         continue;
                 }
 
