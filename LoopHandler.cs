@@ -82,6 +82,8 @@ namespace HTTPConsole
                         '>' => x => x >> by,
                         _ => throw new Exception()
                     };
+
+                    if (c is '*' or '/' && start == 0) start = 1;
                 }
                 catch
                 {
@@ -127,7 +129,7 @@ namespace HTTPConsole
                 {
                     Program.Command(() => macro[c++], verbose, uri, true, i, pipePath, conditions); // haha funny c++
                 }
-                catch (TimeoutException e) // bad, don't be lazy
+                catch (TimeoutException) // bad, don't be lazy
                 {
                     break;
                 }
