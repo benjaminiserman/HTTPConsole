@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Reflection;
 using System.IO;
+using System.Net;
+using System.Reflection;
+using System.Text;
 
 namespace HTTPConsole
 {
@@ -11,16 +10,25 @@ namespace HTTPConsole
     {
         static void Main(string[] args)
         {
+            Uri uri = null;
+            InputHandler.Input(Console.ReadLine, s => uri = new UriBuilder(s).Uri);
+
             Console.Write("Enter URL: ");
-            Uri uri = null; 
-            Input(s => uri = new UriBuilder(s).Uri);
+
+            Command(Console.ReadLine, true, uri);
+        }
+
+        private static void Command(Func<string> getString, bool verbose, Uri uri)
+        {
+            bool pipe = false, write = true;
+            string pipePath = string.Empty;
 
             while (true)
             {
                 HttpWebRequest request = WebRequest.Create(uri) as HttpWebRequest;
-                
-                Console.WriteLine("METHOD");
-                Input(s => request.Method = s, s => s.ToUpper());
+
+                WriteLine("METHOD");
+                InputHandler.Input(() => getString().ToUpper(), s => request.Method = s);
 
                 switch (request.Method)
                 {
@@ -28,112 +36,97 @@ namespace HTTPConsole
                         Loop(uri);
                         continue;
                     case "URL":
-                    case "URI":
-                        Console.Write("Enter URL: ");
-                        Input(s => uri = new UriBuilder(s).Uri);
+                        WriteLine("Enter URL: ");
+                        InputHandler.Input(getString, s => uri = new UriBuilder(s).Uri);
                         continue;
                     case "VERBATIM":
-                        Console.WriteLine("METHOD (verbatim)");
-                        Input(s => request.Method = s, s => s.ToUpper());
+                        WriteLine("METHOD (verbatim)");
+                        InputHandler.Input(() => getString().ToUpper(), s => request.Method = s);
                         continue;
+                    case "RUN":
+                        WriteLine("Display prompts while running? (y/n)");
+                        bool runVerbose = InputHandler.InputYN(getString);
+
+                        WriteLine("Enter path of file to run.");
+
+                        string path = string.Empty;
+                        InputHandler.Input(() => getString().Trim(), delegate (string s)
+                        {
+                            new Uri(s, UriKind.RelativeOrAbsolute); // this will error and trip InputHandler try/catch if bad path
+                            path = s;
+                        });
+
+                        using (StreamReader reader = new(path))
+                        {
+                            Command(reader.ReadLine, runVerbose, uri);
+                        }
+
+                        WriteLine("RUN complete.");
+                        continue;
+                    case "PIPE":
+                        WriteLine("Display output? (y/n)");
+                        write = InputHandler.InputYN(getString);
+
+                        WriteLine("Pipe to file: (enter nothing to disable)");
+                        InputHandler.Input(() => getString().Trim(), delegate (string s)
+                        {
+                            if (string.IsNullOrEmpty(s))
+                            {
+                                pipe = false;
+                            }
+                            else
+                            {
+                                _ = new Uri(s, UriKind.RelativeOrAbsolute); // this will error and trip InputHandler try/catch if bad path
+                                pipePath = s;
+                                pipe = true;
+                            }
+                        });
+
+                        continue;
+                    case "END":
+                        return;
                 }
 
-                Console.WriteLine("PROPERTY VALUE (press enter twice to continue)");
+                WriteLine("PROPERTY VALUE (press enter twice to continue)");
                 while (true)
                 {
-                    string input = Console.ReadLine();
+                    string input = getString();
                     if (string.IsNullOrWhiteSpace(input)) break;
 
                     string check = input.ToLower();
-                    if (check == "cookie") HandleCookies(request, uri);
-                    else if (check == "content") HandleContent(request);
+                    if (check == "cookie") CookieHandler.Handle(request, uri, getString, verbose);
+                    else if (check == "content") ContentHandler.Handle(request, getString, verbose);
                     else try
-                    {
-                        string[] split = input.Split();
-                        split[0] = Alias(char.ToUpper(split[0][0]) + split[0].Substring(1));
+                        {
+                            string[] split = input.Split();
+                            split[0] = char.ToUpper(split[0][0]) + split[0].Substring(1);
 
-                        object obj;
+                            object obj;
 
-                        string value = split[1];
-                        for (int i = 2; i < split.Length; i++) value += $" {split[i]}";
+                            string value = split[1];
+                            for (int i = 2; i < split.Length; i++) value += $" {split[i]}";
 
-                        PropertyInfo pInfo = typeof(WebRequest).GetProperty(split[0]);
-                        if (pInfo.PropertyType.IsEnum) obj = Enum.Parse(pInfo.PropertyType, value);
-                        else obj = Convert.ChangeType(value, pInfo.PropertyType);
+                            PropertyInfo pInfo = typeof(WebRequest).GetProperty(split[0]);
+                            if (pInfo.PropertyType.IsEnum) obj = Enum.Parse(pInfo.PropertyType, value);
+                            else obj = Convert.ChangeType(value, pInfo.PropertyType);
 
-                        pInfo.SetValue(request, obj);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine($"{e.Message}... Please try again.");
-                    }
+                            pInfo.SetValue(request, obj);
+                        }
+                        catch (Exception e)
+                        {
+                            WriteLine($"{e.Message}... Please try again.");
+                        }
                 }
 
-                Console.WriteLine("Sending...");
+                WriteLine("Sending...");
 
-                DisplayResponse(GetResponse(request));
+                DisplayResponse(GetResponse(request), write, pipePath);
             }
-        }
 
-        private static void HandleCookies(HttpWebRequest request, Uri uri)
-        {
-            if (request.SupportsCookieContainer)
+            void WriteLine(object x)
             {
-                Console.WriteLine("COOKIE=VALUE");
-
-                request.CookieContainer ??= new CookieContainer();
-                while (true)
-                {
-                    string cookieString = Input(s => s.Contains('=') || string.IsNullOrWhiteSpace(s));
-
-                    if (string.IsNullOrWhiteSpace(cookieString)) break;
-
-                    try
-                    {
-                        int equalsIndex = cookieString.IndexOf('=');
-                        string key = cookieString.Substring(0, equalsIndex);
-                        string value = cookieString.Substring(equalsIndex + 1);
-
-                        request.CookieContainer.Add(new Cookie(key, value, null, uri.Host));
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine($"{e.Message}... Please try again.");
-                    }
-                }
+                if (verbose) Console.WriteLine(x);
             }
-            else Console.WriteLine("Cookies are not supported for this type of request.");
-
-            Console.WriteLine("PROPERTY VALUE (press enter twice to continue)");
-        }
-
-        private static void HandleContent(HttpWebRequest request)
-        {
-            Console.WriteLine("ContentType: (blank to skip, 0 for application/x-www-form-urlencoded)");
-            string s = Console.ReadLine().Trim();
-            if (!string.IsNullOrEmpty(s))
-            {
-                if (s == "0") s = "application/x-www-form-urlencoded";
-                request.ContentType = s;
-            }
-            string contentString = string.Empty;
-            Console.WriteLine("Content:");
-            while (true)
-            {
-                s = Console.ReadLine();
-                if (string.IsNullOrEmpty(s)) break;
-                else contentString += s;
-            }
-
-            byte[] byteArray = Encoding.ASCII.GetBytes(contentString);
-
-            request.ContentLength = byteArray.Length;
-
-            Stream dataStream = request.GetRequestStream();
-            dataStream.Write(byteArray, 0, byteArray.Length);
-            dataStream.Close();
-
-            Console.WriteLine("PROPERTY VALUE (press enter twice to continue)");
         }
 
         private static void Loop(Uri uri)
@@ -183,87 +176,33 @@ namespace HTTPConsole
             return response;
         }
 
-        private static void DisplayResponse(WebResponse response)
+        private static void DisplayResponse(WebResponse response, bool display, string pipePath)
         {
-            Console.WriteLine($"Response with code ({(int)(response as HttpWebResponse).StatusCode}) from {response.ResponseUri}:");
-            Console.WriteLine($"\nHEADERS:\n");
+            StreamWriter writer = null;
+            if (!string.IsNullOrWhiteSpace(pipePath)) writer = File.AppendText(pipePath);
+
+            Write($"Response with code ({(int)(response as HttpWebResponse).StatusCode}) from {response.ResponseUri}:");
+            Write($"\nHEADERS:\n");
 
             foreach (string key in response.Headers.AllKeys)
             {
-                Console.WriteLine($"{key}, {response.Headers[key]}");
+                Write($"{key}, {response.Headers[key]}");
             }
 
-            Console.WriteLine("\nCONTENT:");
+            Write("\nCONTENT:");
 
             var s = new StreamReader(response.GetResponseStream());
 
-            Console.WriteLine(s.ReadToEnd());
+            Write(s.ReadToEnd());
 
             s.Close();
-        }
+            if (writer is not null) writer.Close();
 
-        private static void Template(Uri uri)
-        {
-            HttpWebRequest request = WebRequest.Create(uri) as HttpWebRequest;
-
-            request.Method = "GET";
-
-            if (false) // COOKIES
+            void Write(object x)
             {
-                request.CookieContainer ??= new CookieContainer();
-                request.CookieContainer.Add(new Cookie("key", "value", null, uri.Host));
+                if (display) Console.WriteLine(x);
+                if (writer is not null) writer.WriteLine(x);
             }
-
-            if (false) // CONTENT
-            {
-                request.ContentType = "application/x-www-form-urlencoded";
-
-                string contentString = "";
-
-                byte[] byteArray = Encoding.ASCII.GetBytes(contentString);
-
-                request.ContentLength = byteArray.Length;
-
-                Stream dataStream = request.GetRequestStream();
-                dataStream.Write(byteArray, 0, byteArray.Length);
-                dataStream.Close();
-            }
-            
-            DisplayResponse(GetResponse(request));
-        }
-
-        private static string Alias(string s)
-        {
-            return s;
-        }
-
-        private static void Input(Action<string> action, Func<string, string> modify = null)
-        {
-            modify ??= s => s;
-
-            while (true)
-            {
-                try
-                {
-                    action(modify(Console.ReadLine().Trim()));
-                    return;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"{e.Message}... Please try again.");
-                }
-            }
-        }
-
-        private static string Input(Func<string, bool> check, Func<string, string> modify = null)
-        {
-            modify ??= x => x;
-            string s;
-            while (!check(s = modify(Console.ReadLine().Trim()))) 
-            {
-                Console.WriteLine("Invalid format... Please try again.");
-            }
-            return s;
         }
     }
 }
