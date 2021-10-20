@@ -14,15 +14,15 @@ namespace HTTPConsole
                 request.CookieContainer ??= new CookieContainer();
                 while (true)
                 {
-                    string cookieString = InputHandler.Input(getString, s => s.Contains('=') || string.IsNullOrWhiteSpace(s));
+                    string cookieString = InputHandler.Input.Get(getString, s => s.Contains('=') || string.IsNullOrWhiteSpace(s));
 
                     if (string.IsNullOrWhiteSpace(cookieString)) break;
 
                     try
                     {
                         int equalsIndex = cookieString.IndexOf('=');
-                        string key = cookieString.Substring(0, equalsIndex);
-                        string value = cookieString.Substring(equalsIndex + 1);
+                        string key = cookieString[0..equalsIndex];
+                        string value = cookieString[(equalsIndex + 1)..];
 
                         if (loop)
                         {

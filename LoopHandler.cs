@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using InputHandler;
 
 namespace HTTPConsole
 {
@@ -12,7 +13,7 @@ namespace HTTPConsole
         public static void Loop(Func<string> getString, bool verbose, Uri uri, bool display, string pipePath)
         {
             WriteLine("Display counter? (y/n)");
-            bool displayCounter = InputHandler.InputYN(getString);
+            bool displayCounter = Input.GetYN(getString);
 
             WriteLine("Enter for statement");
             string s = getString().Trim().ToLower();
@@ -127,7 +128,7 @@ namespace HTTPConsole
 
                 try
                 {
-                    Program.Command(() => macro[c++], verbose, uri, true, i, pipePath, conditions); // haha funny c++
+                    Program.Command(() => macro[c++], false, uri, true, i, pipePath, conditions); // haha funny c++
                 }
                 catch (TimeoutException) // bad, don't be lazy
                 {

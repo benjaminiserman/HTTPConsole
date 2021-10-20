@@ -16,7 +16,7 @@ namespace HTTPConsole
                 }
 
                 string[] split = input.Split();
-                split[0] = char.ToUpper(split[0][0]) + split[0].Substring(1);
+                split[0] = char.ToUpper(split[0][0]) + split[0][1..];
 
                 object obj;
 

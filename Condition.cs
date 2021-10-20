@@ -8,7 +8,7 @@ namespace HTTPConsole
 {
     public class Condition
     {
-        Predicate<string> condition;
+        readonly Predicate<string> condition;
         public string Expected { get; private set; }
         public string Command { get; private set; }
 

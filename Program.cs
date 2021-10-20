@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Linq;
+using InputHandler;
 
 namespace HTTPConsole
 {
@@ -13,7 +14,7 @@ namespace HTTPConsole
         {
             Uri uri = null;
             Console.WriteLine("Enter URL: ");
-            InputHandler.Input(Console.ReadLine, s => uri = new UriBuilder(s).Uri);
+            Input.Get(Console.ReadLine, s => uri = new UriBuilder(s).Uri);
 
             Command(Console.ReadLine, true, uri, false, 0, string.Empty, null);
         }
@@ -27,7 +28,7 @@ namespace HTTPConsole
                 HttpWebRequest request = WebRequest.Create(uri) as HttpWebRequest;
 
                 WriteLine("METHOD");
-                InputHandler.Input(() => getString().ToUpper(), s => request.Method = s);
+                Input.Get(() => getString().ToUpper(), s => request.Method = s);
 
                 bool runVerbose = false;
 
@@ -38,11 +39,11 @@ namespace HTTPConsole
                         continue;
                     case "URL":
                         WriteLine("Enter URL: ");
-                        InputHandler.Input(getString, s => uri = new UriBuilder(s).Uri);
+                        Input.Get(getString, s => uri = new UriBuilder(s).Uri);
                         continue;
                     case "VERBATIM":
                         WriteLine("METHOD (verbatim)");
-                        InputHandler.Input(() => getString().ToUpper(), s => request.Method = s);
+                        Input.Get(() => getString().ToUpper(), s => request.Method = s);
                         continue;
                     case "RUN_DEBUG":
                         runVerbose = true;
@@ -51,7 +52,7 @@ namespace HTTPConsole
                         WriteLine("Enter path of file to run.");
 
                         string path = string.Empty;
-                        InputHandler.Input(() => getString().Trim(), delegate (string s)
+                        Input.Get(() => getString().Trim(), delegate (string s)
                         {
                             _ = new Uri(s, UriKind.RelativeOrAbsolute); // this will error and trip InputHandler try/catch if bad path
                             path = s;
@@ -66,16 +67,19 @@ namespace HTTPConsole
                         continue;
                     case "PIPE":
                         WriteLine("Display output? (y/n)");
-                        display = InputHandler.InputYN(getString);
+                        display = Input.GetYN(getString);
 
                         WriteLine("Pipe to file: (enter nothing to disable)");
-                        InputHandler.Input(() => getString().Trim(), delegate (string s)
+                        Input.Get(() => getString().Trim(), delegate (string s)
                         {
                             if (!string.IsNullOrEmpty(s)) _ = new Uri(s, UriKind.RelativeOrAbsolute); // this will error and trip InputHandler try/catch if bad path
                             
                             pipePath = s;
                         });
 
+                        continue;
+                    case "CLEAR":
+                        Console.Clear();
                         continue;
                     case "END":
                         return;
