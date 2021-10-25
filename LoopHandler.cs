@@ -68,8 +68,17 @@ namespace HTTPConsole
                     }
                     else
                     {
-                        if ("*/^<>".Contains(c)) by = 2;
-                        else by = 1;
+                        if (int.TryParse(split[2], out by))
+                        {
+                            if (infinite || start <= end) increment = x => x + 1;
+                            else increment = x => x - 1;
+                            goto Leave;
+                        }
+                        else
+                        {
+                            if ("*/^<>".Contains(c)) by = 2;
+                            else by = 1;
+                        }
                     }
 
                     increment = c switch
@@ -85,6 +94,8 @@ namespace HTTPConsole
                     };
 
                     if (c is '*' or '/' && start == 0) start = 1;
+
+                    Leave:;
                 }
                 catch
                 {
