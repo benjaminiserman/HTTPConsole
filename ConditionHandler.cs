@@ -1,22 +1,20 @@
-﻿using System;
+﻿namespace HTTPConsole;
+using System;
 using System.Collections.Generic;
 
-namespace HTTPConsole
+public static class ConditionHandler
 {
-    public static class ConditionHandler
+    public static List<Condition> Handle(Func<string> getString)
     {
-        public static List<Condition> Handle(Func<string> getString)
+        List<Condition> conditions = new();
+
+        string s = getString();
+        while (!string.IsNullOrWhiteSpace(s))
         {
-            List<Condition> conditions = new();
-
-            string s = getString();
-            while (!string.IsNullOrWhiteSpace(s))
-            {
-                conditions.Add(new Condition(s));
-                s = getString();
-            }
-
-            return conditions;
+            conditions.Add(new Condition(s));
+            s = getString();
         }
+
+        return conditions;
     }
 }
