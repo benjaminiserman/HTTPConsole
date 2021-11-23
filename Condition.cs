@@ -5,7 +5,7 @@ namespace HTTPConsole
 {
     public class Condition
     {
-        readonly Predicate<string> condition;
+        readonly Predicate<string> _condition;
         public string Expected { get; private set; }
         public string Command { get; private set; }
 
@@ -18,48 +18,36 @@ namespace HTTPConsole
 
             bool not = split[2][0] == '!';
 
-            string method;
-            if (not) method = split[2][1..].ToLower();
-            else method = split[2].ToLower();
-
+            string method = not 
+                ? split[2][1..].ToLower() 
+                : split[2].ToLower();
             string query = string.Empty;
             for (int i = 3; i < split.Length; i++) query += $"{split[i]} ";
-            query = query[0..^1];
+            query = query[..^1];
 
             switch (method)
             {
                 case "contains":
                 case "contain":
                 {
-                    if (not) condition = s => !s.Contains(query);
-                    else condition = s => s.Contains(query);
+                    _condition = not 
+                        ? (s => !s.Contains(query)) 
+                        : (s => s.Contains(query));
                     break;
                 }
                 case "is":
                 case "equals":
                 {
-                    if (not) condition = s => s != query;
-                    else condition = s => s == query;
+                    _condition = not 
+                        ? (s => s != query) 
+                        : (s => s == query);
                     break;
                 }
             }
         }
 
-        public bool Eval(string x) => condition(x);
+        public bool Eval(string x) => _condition(x);
 
         public bool Eval(Dictionary<string, string> dict) => Eval(dict[Expected]);
     }
 }
-
-/* y
- * for 100
- * break content contains appear to be a valid cookie
- * display content !contains Not very special though
- * 
- * get
- * cookie
- * name=$i
- * 
- * 
- * end
- */

@@ -105,27 +105,32 @@ namespace HTTPConsole
                     string content = s.ReadToEnd();
                     s.Close();
 
-                    Dictionary<string, string> dict = new()
+                    bool commandDisplay = true;
+
+                    if (conditions is not null)
                     {
-                        { "content", content },
-                    };
-
-                    // key is 
-
-                    bool commandDisplay = !conditions.Any(x => x.Command == "display");
-
-                    foreach (Condition condition in conditions)
-                    {
-                        if (condition.Eval(dict))
+                        Dictionary<string, string> dict = new()
                         {
-                            switch (condition.Command)
+                            { "content", content },
+                        };
+
+                        // key is 
+
+                        commandDisplay = !conditions.Any(x => x.Command == "display");
+
+                        foreach (Condition condition in conditions)
+                        {
+                            if (condition.Eval(dict))
                             {
-                                case "display":
-                                    commandDisplay = true;
-                                    break;
-                                case "break":
-                                    BadLog("BREAK CASE ENCOUNTERED", pipePath, display);
-                                    throw new TimeoutException("Interrupt.");
+                                switch (condition.Command)
+                                {
+                                    case "display":
+                                        commandDisplay = true;
+                                        break;
+                                    case "break":
+                                        BadLog("BREAK CASE ENCOUNTERED", pipePath, display);
+                                        throw new TimeoutException("Interrupt.");
+                                }
                             }
                         }
                     }
@@ -205,7 +210,6 @@ namespace HTTPConsole
                 {
                     Console.WriteLine($"File write failed: {e.Message}");
                 }
-                
             }
 
             if (display) Console.WriteLine(x);

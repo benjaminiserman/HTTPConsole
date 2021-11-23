@@ -16,6 +16,7 @@ namespace HTTPConsole
                 if (s == "0") s = "application/x-www-form-urlencoded";
                 request.ContentType = s;
             }
+
             string contentString = string.Empty;
             WriteLine("Content:");
             while (true)
@@ -44,9 +45,6 @@ namespace HTTPConsole
             {
                 if (verbose) Console.WriteLine(x);
             }
-
-            // $i
-            // \$i
         }
     }
 }

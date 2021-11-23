@@ -14,7 +14,7 @@ namespace HTTPConsole
             WriteLine("Enter for statement");
             string s = getString().Trim().ToLower();
             string[] split = s.Split();
-            // for 0..100 +1
+
             if (split[0] != "for")
             {
                 WriteLine("Loop malformed, returning. Start your loop with \"for\"");
@@ -66,14 +66,14 @@ namespace HTTPConsole
                     {
                         if (int.TryParse(split[2], out by))
                         {
-                            if (infinite || start <= end) increment = x => x + 1;
-                            else increment = x => x - 1;
+                            increment = infinite || start <= end 
+                                ? (x => x + 1) 
+                                : (x => x - 1);
                             goto Leave;
                         }
                         else
                         {
-                            if ("*/^<>".Contains(c)) by = 2;
-                            else by = 1;
+                            by = "*/^<>".Contains(c) ? 2 : 1;
                         }
                     }
 
@@ -101,8 +101,9 @@ namespace HTTPConsole
             }
             else
             {
-                if (infinite || start <= end) increment = x => x + 1;
-                else increment = x => x - 1;
+                increment = infinite || start <= end 
+                    ? (x => x + 1) 
+                    : (x => x - 1);
             }
 
             WriteLine("Enter special instructions (enter twice to continue)");
@@ -154,17 +155,4 @@ namespace HTTPConsole
             ? start <= x && x <= end 
             : start >= x && x >= end;
     }
-
-    /* y
-     * for 100
-     * break content contains appear to be a valid cookie
-     * display content !contains Not very special though
-     * 
-     * get
-     * cookie
-     * name=$i
-     * 
-     * 
-     * end
-     */
 }

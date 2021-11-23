@@ -24,8 +24,9 @@ namespace HTTPConsole
                 for (int i = 2; i < split.Length; i++) value += $" {split[i]}";
 
                 PropertyInfo pInfo = typeof(WebRequest).GetProperty(split[0]);
-                if (pInfo.PropertyType.IsEnum) obj = Enum.Parse(pInfo.PropertyType, value);
-                else obj = Convert.ChangeType(value, pInfo.PropertyType);
+                obj = pInfo.PropertyType.IsEnum 
+                    ? Enum.Parse(pInfo.PropertyType, value) 
+                    : Convert.ChangeType(value, pInfo.PropertyType);
 
                 pInfo.SetValue(request, obj);
             }

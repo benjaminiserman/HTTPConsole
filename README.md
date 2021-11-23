@@ -124,3 +124,17 @@ examples:
 display content !contains very special though (displays HTTP response if it's content does not contain the text "very special though")
 
 break content contains not a valid cookie (breaks loop if HTTP response content contains "not a valid cookie")
+
+example for loop to solve (http://mercury.picoctf.net:6418/):
+```
+for 100
+break content contains appear to be a valid cookie
+display content !contains Not very special though
+
+get
+cookie
+name=$i
+
+
+end
+```
